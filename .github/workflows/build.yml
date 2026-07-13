@@ -1,0 +1,41 @@
+name: Build and push vLLM runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image
+        run: |
+          docker build \
+            --tag juiceboxdocks/vllm-runtime:0.21.0-cu129-ada \
+            --tag juiceboxdocks/vllm-runtime:ada-latest \
+            .
+
+      - name: Verify vLLM imports
+        run: |
+          docker run --rm juiceboxdocks/vllm-runtime:0.21.0-cu129-ada \
+            python -c "import vllm; print(vllm.__version__)"
+
+      - name: Push image
+        run: |
+          docker push juiceboxdocks/vllm-runtime:0.21.0-cu129-ada
+          docker push juiceboxdocks/vllm-runtime:ada-latest
